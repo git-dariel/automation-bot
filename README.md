@@ -1,8 +1,8 @@
 # Clinic Sign-up Automation Prototype
 
-A local proof of concept that uses a Next.js dashboard, FastAPI, and headed Playwright Chromium to fill ten copies of a public Google Form with fabricated clinician schedule data.
+A proof of concept that uses a Next.js dashboard, FastAPI, and Playwright Chromium to fill ten copies of a public Google Form with fabricated clinician schedule data.
 
-The **Test Submit** switch is off by default. Successful fill-only and submission runs keep Chromium open for inspection and finish when you close the browser. Use this project only with forms you own or are authorized to automate.
+The **Test Submit** switch is off by default. Local runs keep Playwright Chromium open and finish when you close it; deployed runs open prefilled inspection tabs in your browser while Heroku verifies the data headlessly. Use this project only with forms you own or are authorized to automate.
 
 ## Requirements
 
@@ -78,7 +78,9 @@ PLAYWRIGHT_MAX_CONCURRENT_PAGES=1
 WEB_CONCURRENCY=1
 ```
 
-The remote backend fills or submits one profile at a time in headless Chromium and closes each page after completion. This keeps the ten-profile run within the memory available to the Basic dyno. Keep submission disabled unless responses are deliberately intended.
+The remote backend fills or submits one profile at a time in headless Chromium and closes each server-side page after completion. The API also returns ten prefilled Google Form URLs so the deployed frontend can open visible tabs in the user's own browser. Allow pop-ups for the Vercel site when Chrome asks; otherwise the dashboard closes any partial set of tabs and shows an error.
+
+Visible cloud-mode tabs are inspection copies and remain open until the user closes them. When **Test Submit** is enabled, submission is still performed and verified by the backend's isolated headless pages; the visible copies are not submitted a second time. This keeps the ten-profile run within the memory available to the Basic dyno. Keep submission disabled unless responses are deliberately intended.
 
 Do not commit real credentials or student data.
 

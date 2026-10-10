@@ -6,6 +6,7 @@ from .config import get_settings
 from .form_urls import FormUrlError, validate_form_url
 from .job_store import ActiveRunError, JobStore
 from .models import TestRunCreate, TestRunCreated, TestRunResponse
+from .prefill_urls import PrefillUrlError, build_prefill_urls
 from .profiles import build_sample_profiles
 
 
@@ -45,8 +46,13 @@ def create_test_run(
     try:
         validate_form_url(form_url)
         profiles = build_sample_profiles()
+        prefill_urls = (
+            build_prefill_urls(form_url, profiles)
+            if not settings.keep_browser_open
+            else []
+        )
         job = store.create(request.submit, profiles)
-    except FormUrlError as error:
+    except (FormUrlError, PrefillUrlError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     except ActiveRunError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
@@ -60,7 +66,11 @@ def create_test_run(
         store,
         settings,
     )
-    return TestRunCreated(job_id=job.id, status=job.status)
+    return TestRunCreated(
+        job_id=job.id,
+        status=job.status,
+        prefill_urls=prefill_urls,
+    )
 
 
 @app.get("/test-runs/{job_id}", response_model=TestRunResponse)

@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from fastapi.testclient import TestClient
 
 from backend.app import main
@@ -41,6 +43,25 @@ def test_create_and_get_completed_run(monkeypatch):
     assert result.json()["status"] == "completed"
     assert result.json()["summary"]["ready"] == 10
     assert result.json()["execution_ms"] == 42
+
+
+def test_remote_run_returns_visible_prefilled_tabs(monkeypatch):
+    monkeypatch.setattr(main, "run_automation_job", complete_without_browser)
+    monkeypatch.setattr(
+        main,
+        "settings",
+        replace(main.settings, keep_browser_open=False),
+    )
+    expected_urls = [f"https://docs.google.com/forms/example?profile={index}" for index in range(10)]
+    monkeypatch.setattr(main, "build_prefill_urls", lambda form_url, profiles: expected_urls)
+
+    response = client.post(
+        "/test-runs",
+        json={"form_url": main.settings.google_form_url, "submit": False},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["prefill_urls"] == expected_urls
 
 
 def test_rejects_non_google_form(monkeypatch):

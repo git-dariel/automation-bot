@@ -13,17 +13,20 @@ from playwright.async_api import (
 )
 
 from .config import Settings
+from .form_fields import (
+    CLINICIAN_NAME_LABEL,
+    DEPARTMENT_LABEL,
+    EMAIL_LABEL,
+    SCHEDULED_DAY_LABEL,
+    SHIFT_SCHEDULE_LABEL,
+    STUDENT_NUMBER_LABEL,
+    TIME_INTERVAL_LABEL,
+)
 from .job_store import JobStore
 from .models import ClinicianProfile, EmployeeStatus, RunStatus
 
 
 SAFE_AUTOMATION_ERROR = "The form could not be completed. Check its accessibility and field labels."
-SHIFT_SCHEDULE_LABEL = (
-    "Shift Schedule ( Saturdays are am pm only, so please use 8-12 and 12-4pm "
-    "as substitute for 1-5pm)"
-)
-
-
 async def _question(page: Page, label: str) -> Locator:
     heading = page.locator('[role="heading"]').filter(
         has_text=re.compile(rf"^{re.escape(label)}\s*\*?$", re.IGNORECASE),
@@ -71,19 +74,19 @@ async def _process_employee(
     store.update_employee(job_id, profile.id, EmployeeStatus.FILLING)
     try:
         await page.goto(form_url, wait_until="domcontentloaded")
-        await _fill_text(page, "Email", profile.email, input_type="email")
-        await _fill_text(page, "Name of Clinician", profile.clinician_name)
-        await _fill_text(page, "Student Number", profile.student_number)
-        await _fill_radio(page, "Scheduled Day", profile.scheduled_day)
+        await _fill_text(page, EMAIL_LABEL, profile.email, input_type="email")
+        await _fill_text(page, CLINICIAN_NAME_LABEL, profile.clinician_name)
+        await _fill_text(page, STUDENT_NUMBER_LABEL, profile.student_number)
+        await _fill_radio(page, SCHEDULED_DAY_LABEL, profile.scheduled_day)
         await _fill_radio(page, SHIFT_SCHEDULE_LABEL, profile.shift_schedule)
         await _fill_radio(
             page,
-            "Department / Procedure to do",
+            DEPARTMENT_LABEL,
             profile.department,
         )
         await _fill_radio(
             page,
-            "Time Interval Required",
+            TIME_INTERVAL_LABEL,
             profile.time_interval,
         )
         store.update_employee(job_id, profile.id, EmployeeStatus.READY)

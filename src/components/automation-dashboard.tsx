@@ -8,6 +8,7 @@ import {
   getTestRun,
   type EmployeeStatus,
   type TestRun,
+  usesRemoteAutomationApi,
 } from "@/lib/test-runs";
 
 const statusStyles: Record<EmployeeStatus, string> = {
@@ -43,6 +44,7 @@ type AutomationDashboardProps = {
 };
 
 export function AutomationDashboard({ defaultFormUrl, profiles }: AutomationDashboardProps) {
+  const opensClientTabs = usesRemoteAutomationApi();
   const [formUrl, setFormUrl] = useState(defaultFormUrl);
   const [submit, setSubmit] = useState(false);
   const [run, setRun] = useState<TestRun | null>(null);
@@ -83,6 +85,24 @@ export function AutomationDashboard({ defaultFormUrl, profiles }: AutomationDash
       if (!confirmed) return;
     }
 
+    const clientTabs = opensClientTabs
+      ? profiles.map(() => window.open("about:blank", "_blank"))
+      : [];
+    let tabsWereNavigated = false;
+    if (clientTabs.some((tab) => tab === null)) {
+      clientTabs.forEach((tab) => tab?.close());
+      setError(
+        `Chrome blocked one or more tabs. Allow pop-ups for this site, then start the test again.`,
+      );
+      return;
+    }
+
+    clientTabs.forEach((tab, index) => {
+      if (!tab) return;
+      tab.document.title = `Preparing clinician ${index + 1}`;
+      tab.document.body.textContent = "Preparing the prefilled Google Form…";
+    });
+
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -92,8 +112,20 @@ export function AutomationDashboard({ defaultFormUrl, profiles }: AutomationDash
 
     try {
       const created = await createTestRun(formUrl.trim(), submit, controller.signal);
+      if (opensClientTabs) {
+        if (created.prefill_urls.length !== clientTabs.length) {
+          throw new Error("The API did not return all visible form tabs.");
+        }
+        clientTabs.forEach((tab, index) => {
+          if (!tab) return;
+          tab.location.replace(created.prefill_urls[index]);
+          tab.opener = null;
+        });
+        tabsWereNavigated = true;
+      }
       await pollRun(created.job_id, controller.signal);
     } catch (caught) {
+      if (!tabsWereNavigated) clientTabs.forEach((tab) => tab?.close());
       if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError(caught instanceof Error ? caught.message : "Unable to start the test run.");
     } finally {
@@ -106,7 +138,7 @@ export function AutomationDashboard({ defaultFormUrl, profiles }: AutomationDash
       <section className="flex flex-col gap-3 border-b border-slate-200 pb-7 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-sm font-semibold uppercase tracking-[0.16em] text-blue-700">
-            Local automation prototype
+            Browser automation prototype
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
             Clinic sign-up test runner
@@ -118,7 +150,7 @@ export function AutomationDashboard({ defaultFormUrl, profiles }: AutomationDash
         </div>
         <div className="mt-2 flex items-center gap-2 text-sm text-slate-600 sm:mt-0">
           <span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" />
-          Local only
+          {opensClientTabs ? "Cloud API + visible tabs" : "Local browser mode"}
         </div>
       </section>
 
@@ -197,7 +229,14 @@ export function AutomationDashboard({ defaultFormUrl, profiles }: AutomationDash
           </dl>
           {run?.status === "ready" && (
             <p className="mt-6 rounded-lg bg-blue-400/10 p-3 text-sm leading-5 text-blue-100">
-              Tabs are ready for inspection. Close Chromium when finished.
+              {opensClientTabs
+                ? "The prefilled Google Form tabs are ready for inspection."
+                : "Tabs are ready for inspection. Close Chromium when finished."}
+            </p>
+          )}
+          {opensClientTabs && run?.status === "completed" && (
+            <p className="mt-6 rounded-lg bg-emerald-400/10 p-3 text-sm leading-5 text-emerald-100">
+              The prefilled Google Form tabs remain open in your browser.
             </p>
           )}
         </aside>

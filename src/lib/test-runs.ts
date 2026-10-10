@@ -29,11 +29,20 @@ export type TestRun = {
   results: ClinicianResult[];
 };
 
-type CreatedRun = { job_id: string; status: RunStatus };
+type CreatedRun = { job_id: string; status: RunStatus; prefill_urls: string[] };
 
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
 ).replace(/\/$/, "");
+
+export function usesRemoteAutomationApi() {
+  try {
+    const hostname = new URL(API_BASE_URL).hostname;
+    return hostname !== "localhost" && hostname !== "127.0.0.1" && hostname !== "::1";
+  } catch {
+    return false;
+  }
+}
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (response.ok) return response.json() as Promise<T>;

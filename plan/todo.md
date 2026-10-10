@@ -154,6 +154,7 @@
 - [x] Display run summary, execution time, and per-profile statuses.
 - [x] Handle API validation, conflict, and network errors.
 - [x] Use an explicit light theme with accessible contrast.
+- [ ] Open ten prefilled inspection tabs from the deployed frontend when using the cloud API.
 
 ### Phase 17 - MVP Backend
 
@@ -180,6 +181,7 @@
 - [x] Run the backend automated test suite after the clinic form migration.
 - [x] Run a live fill-only test with ten visible tabs.
 - [x] Confirm ten-tab concurrency and profile data isolation live.
+- [x] Validate generated prefill URLs against the live Google Form without submitting responses.
 - [ ] Run an intentional submission test with ten responses on an owned test form.
 - [ ] Verify ten distinct responses in the owned Google Form.
 - [x] Document setup, test workflow, safety boundaries, and limitations.

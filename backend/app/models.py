@@ -44,6 +44,7 @@ class TestRunCreate(BaseModel):
 class TestRunCreated(BaseModel):
     job_id: str
     status: RunStatus
+    prefill_urls: list[HttpUrl] = Field(default_factory=list)
 
 
 class RunSummary(BaseModel):
