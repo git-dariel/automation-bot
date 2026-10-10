@@ -154,7 +154,7 @@
 - [x] Display run summary, execution time, and per-profile statuses.
 - [x] Handle API validation, conflict, and network errors.
 - [x] Use an explicit light theme with accessible contrast.
-- [ ] Open ten prefilled inspection tabs from the deployed frontend when using the cloud API.
+- [x] Open ten prefilled inspection tabs from the deployed frontend when using the cloud API.
 
 ### Phase 17 - MVP Backend
 
