@@ -17,7 +17,7 @@ from .job_store import JobStore
 from .models import ClinicianProfile, EmployeeStatus, RunStatus
 
 
-SAFE_AUTOMATION_ERROR = "The form could not be completed. Check the visible browser tab and field labels."
+SAFE_AUTOMATION_ERROR = "The form could not be completed. Check its accessibility and field labels."
 SHIFT_SCHEDULE_LABEL = (
     "Shift Schedule ( Saturdays are am pm only, so please use 8-12 and 12-4pm "
     "as substitute for 1-5pm)"
@@ -121,7 +121,10 @@ async def _run(
 
     try:
         async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=False)
+            browser = await playwright.chromium.launch(
+                headless=settings.playwright_headless,
+                chromium_sandbox=False,
+            )
             context = await browser.new_context(locale="en-US")
             context.set_default_timeout(settings.playwright_timeout_ms)
             pages = [await context.new_page() for _ in profiles]
@@ -141,7 +144,11 @@ async def _run(
 
             if has_success:
                 store.mark_ready(job_id, execution_ms)
-                await _wait_for_manual_close(browser, context)
+                if settings.keep_browser_open:
+                    await _wait_for_manual_close(browser, context)
+                else:
+                    await browser.close()
+                    browser = None
                 store.finish(
                     job_id,
                     RunStatus.FAILED if has_failure else RunStatus.COMPLETED,

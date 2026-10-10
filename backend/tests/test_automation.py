@@ -48,9 +48,14 @@ class FakeChromium:
     def __init__(self, browser: FakeBrowser) -> None:
         self.browser = browser
 
-    async def launch(self, headless: bool):
-        assert headless is False
+    async def launch(self, headless: bool, chromium_sandbox: bool):
+        assert headless is self.expected_headless
+        assert chromium_sandbox is False
         return self.browser
+
+    @property
+    def expected_headless(self) -> bool:
+        return getattr(self.browser, "expected_headless", False)
 
 
 class FakePlaywrightManager:
@@ -204,7 +209,15 @@ def test_submitted_tabs_wait_for_manual_close(monkeypatch):
             True,
             [profile],
             store,
-            type("Settings", (), {"playwright_timeout_ms": 1000})(),
+            type(
+                "Settings",
+                (),
+                {
+                    "playwright_timeout_ms": 1000,
+                    "playwright_headless": False,
+                    "keep_browser_open": True,
+                },
+            )(),
         )
     )
 
@@ -214,3 +227,52 @@ def test_submitted_tabs_wait_for_manual_close(monkeypatch):
     assert browser.was_closed is False
     assert result.status.value == "completed"
     assert result.summary.submitted == 1
+
+
+def test_headless_run_closes_browser_without_manual_wait(monkeypatch):
+    store = JobStore()
+    profile = build_sample_profiles()[0]
+    job = store.create(False, [profile])
+    browser = FakeBrowser()
+    browser.expected_headless = True
+
+    async def ready_profile(page, current_profile, form_url, submit, job_id, job_store):
+        del page, form_url
+        assert submit is False
+        job_store.update_employee(job_id, current_profile.id, EmployeeStatus.READY)
+
+    async def unexpected_manual_wait(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("Headless deployment runs must not wait for manual close.")
+
+    monkeypatch.setattr(
+        automation,
+        "async_playwright",
+        lambda: FakePlaywrightManager(browser),
+    )
+    monkeypatch.setattr(automation, "_process_employee", ready_profile)
+    monkeypatch.setattr(automation, "_wait_for_manual_close", unexpected_manual_wait)
+
+    asyncio.run(
+        automation._run(
+            job.id,
+            "https://forms.gle/approved",
+            False,
+            [profile],
+            store,
+            type(
+                "Settings",
+                (),
+                {
+                    "playwright_timeout_ms": 1000,
+                    "playwright_headless": True,
+                    "keep_browser_open": False,
+                },
+            )(),
+        )
+    )
+
+    result = store.get(job.id)
+    assert result is not None
+    assert browser.was_closed is True
+    assert result.status.value == "completed"

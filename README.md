@@ -55,6 +55,27 @@ Backend (`backend/.env`):
 - `FRONTEND_ORIGIN`: permitted browser origin for CORS.
 - `GOOGLE_FORM_URL`: default public Google Form URL.
 - `PLAYWRIGHT_TIMEOUT_MS`: per-action timeout.
+- `PLAYWRIGHT_HEADLESS`: launches Chromium without a visible window when `true`.
+- `KEEP_BROWSER_OPEN`: waits for manual browser closure when `true`.
+
+Local defaults are `PLAYWRIGHT_HEADLESS=false` and `KEEP_BROWSER_OPEN=true`. The Heroku deployment uses the inverse because a dyno has no visible desktop and cannot wait for a user to close browser tabs.
+
+## Heroku backend
+
+The repository root contains the Heroku `Procfile`, Python version, Python dependency entrypoint, Chromium packages, and browser installation hook. The deployed service runs only the FastAPI backend. Its in-memory run history is cleared whenever the dyno restarts.
+
+Heroku must use these runtime values:
+
+```text
+FRONTEND_ORIGIN=http://localhost:3000
+GOOGLE_FORM_URL=https://forms.gle/4Qn7MCvAzMBrR1Hw7
+PLAYWRIGHT_TIMEOUT_MS=30000
+PLAYWRIGHT_HEADLESS=true
+KEEP_BROWSER_OPEN=false
+PLAYWRIGHT_BROWSERS_PATH=0
+```
+
+The remote backend fills or submits in headless Chromium and closes the browser after completion. Keep submission disabled unless responses are deliberately intended.
 
 Do not commit real credentials or student data.
 
