@@ -8,9 +8,18 @@ from backend.app.profiles import build_sample_profiles
 
 
 class FakePage:
+    def __init__(self) -> None:
+        self.closed = False
+
     async def goto(self, form_url: str, wait_until: str) -> None:
         assert form_url.startswith("https://forms.gle/")
         assert wait_until == "domcontentloaded"
+
+    def is_closed(self) -> bool:
+        return self.closed
+
+    async def close(self) -> None:
+        self.closed = True
 
 
 class FakeBrowser:
@@ -216,6 +225,7 @@ def test_submitted_tabs_wait_for_manual_close(monkeypatch):
                     "playwright_timeout_ms": 1000,
                     "playwright_headless": False,
                     "keep_browser_open": True,
+                    "playwright_max_concurrent_pages": 10,
                 },
             )(),
         )
@@ -267,6 +277,7 @@ def test_headless_run_closes_browser_without_manual_wait(monkeypatch):
                     "playwright_timeout_ms": 1000,
                     "playwright_headless": True,
                     "keep_browser_open": False,
+                    "playwright_max_concurrent_pages": 1,
                 },
             )(),
         )

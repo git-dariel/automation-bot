@@ -19,6 +19,7 @@ class Settings:
     playwright_timeout_ms: int
     playwright_headless: bool
     keep_browser_open: bool
+    playwright_max_concurrent_pages: int
 
 
 def get_settings() -> Settings:
@@ -28,4 +29,8 @@ def get_settings() -> Settings:
         playwright_timeout_ms=int(os.getenv("PLAYWRIGHT_TIMEOUT_MS", "30000")),
         playwright_headless=_read_bool("PLAYWRIGHT_HEADLESS", False),
         keep_browser_open=_read_bool("KEEP_BROWSER_OPEN", True),
+        playwright_max_concurrent_pages=max(
+            1,
+            int(os.getenv("PLAYWRIGHT_MAX_CONCURRENT_PAGES", "10")),
+        ),
     )

@@ -57,6 +57,7 @@ Backend (`backend/.env`):
 - `PLAYWRIGHT_TIMEOUT_MS`: per-action timeout.
 - `PLAYWRIGHT_HEADLESS`: launches Chromium without a visible window when `true`.
 - `KEEP_BROWSER_OPEN`: waits for manual browser closure when `true`.
+- `PLAYWRIGHT_MAX_CONCURRENT_PAGES`: limits simultaneous pages in auto-closing mode.
 
 Local defaults are `PLAYWRIGHT_HEADLESS=false` and `KEEP_BROWSER_OPEN=true`. The Heroku deployment uses the inverse because a dyno has no visible desktop and cannot wait for a user to close browser tabs.
 
@@ -73,9 +74,11 @@ PLAYWRIGHT_TIMEOUT_MS=30000
 PLAYWRIGHT_HEADLESS=true
 KEEP_BROWSER_OPEN=false
 PLAYWRIGHT_BROWSERS_PATH=0
+PLAYWRIGHT_MAX_CONCURRENT_PAGES=1
+WEB_CONCURRENCY=1
 ```
 
-The remote backend fills or submits in headless Chromium and closes the browser after completion. Keep submission disabled unless responses are deliberately intended.
+The remote backend fills or submits one profile at a time in headless Chromium and closes each page after completion. This keeps the ten-profile run within the memory available to the Basic dyno. Keep submission disabled unless responses are deliberately intended.
 
 Do not commit real credentials or student data.
 

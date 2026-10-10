@@ -107,6 +107,24 @@ async def _wait_for_manual_close(browser: Browser, context: BrowserContext) -> N
         await asyncio.sleep(0.25)
 
 
+async def _process_with_managed_page(
+    context: BrowserContext,
+    semaphore: asyncio.Semaphore,
+    profile: ClinicianProfile,
+    form_url: str,
+    submit: bool,
+    job_id: str,
+    store: JobStore,
+) -> None:
+    async with semaphore:
+        page = await context.new_page()
+        try:
+            await _process_employee(page, profile, form_url, submit, job_id, store)
+        finally:
+            if not page.is_closed():
+                await page.close()
+
+
 async def _run(
     job_id: str,
     form_url: str,
@@ -127,14 +145,30 @@ async def _run(
             )
             context = await browser.new_context(locale="en-US")
             context.set_default_timeout(settings.playwright_timeout_ms)
-            pages = [await context.new_page() for _ in profiles]
-
-            await asyncio.gather(
-                *(
-                    _process_employee(page, profile, form_url, submit, job_id, store)
-                    for page, profile in zip(pages, profiles, strict=True)
+            if settings.keep_browser_open:
+                pages = [await context.new_page() for _ in profiles]
+                await asyncio.gather(
+                    *(
+                        _process_employee(page, profile, form_url, submit, job_id, store)
+                        for page, profile in zip(pages, profiles, strict=True)
+                    )
                 )
-            )
+            else:
+                semaphore = asyncio.Semaphore(settings.playwright_max_concurrent_pages)
+                await asyncio.gather(
+                    *(
+                        _process_with_managed_page(
+                            context,
+                            semaphore,
+                            profile,
+                            form_url,
+                            submit,
+                            job_id,
+                            store,
+                        )
+                        for profile in profiles
+                    )
+                )
             execution_ms = round((perf_counter() - started) * 1000)
             result = store.get(job_id)
             has_success = bool(
