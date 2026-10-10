@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Clinic Sign-up Automation Prototype
 
-## Getting Started
+A local proof of concept that uses a Next.js dashboard, FastAPI, and headed Playwright Chromium to fill ten copies of a public Google Form with fabricated clinician schedule data.
 
-First, run the development server:
+The **Test Submit** switch is off by default. Successful fill-only and submission runs keep Chromium open for inspection and finish when you close the browser. Use this project only with forms you own or are authorized to automate.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Requirements
+
+- Node.js and pnpm 10
+- Python 3.12
+- A desktop session where headed Chromium can open
+
+## Setup (PowerShell)
+
+From the repository root:
+
+```powershell
+pnpm install
+py -m venv backend\.venv
+backend\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt
+python -m playwright install chromium
+Copy-Item .env.example .env.local
+Copy-Item backend\.env.example backend\.env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The checked-in example values target the supplied Clinic Sign Up Form. They are public identifiers, not credentials. The dashboard accepts a public `forms.gle` short link or canonical `docs.google.com/forms` link, so the configured form can be changed without updating an allowlisted form ID.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+From the `backend` directory, start FastAPI in one PowerShell terminal:
 
-## Learn More
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --env-file .env
+```
 
-To learn more about Next.js, take a look at the following resources:
+From the repository root, start Next.js in another terminal:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```powershell
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000). Keep **Test Submit** disabled for the first run. When all profiles show `ready`, inspect the ten tabs and close Chromium to complete the job.
 
-## Deploy on Vercel
+## Configuration
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Frontend (`.env.local`):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `NEXT_PUBLIC_API_BASE_URL`: FastAPI base URL.
+- `NEXT_PUBLIC_GOOGLE_FORM_URL`: initial URL shown in the dashboard.
+
+Backend (`backend/.env`):
+
+- `FRONTEND_ORIGIN`: permitted browser origin for CORS.
+- `GOOGLE_FORM_URL`: default public Google Form URL.
+- `PLAYWRIGHT_TIMEOUT_MS`: per-action timeout.
+
+Do not commit real credentials or student data.
+
+## Checks
+
+```powershell
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm build
+backend\.venv\Scripts\python.exe -m pytest backend\tests -q
+```
+
+API documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs) while FastAPI is running.
